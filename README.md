@@ -1,5 +1,7 @@
 # PulsePipe
 
+> Version: v0.1 · 15-11-26 · Author: SHIVAM ITCS (JARVIS)
+
 **PulsePipe** is a real-time event-streaming and observability engine built on
 FastAPI. It lets you define **named pipelines**, transform inbound JSON events,
 dispatch them to **subscribers** (any HTTP endpoint), and observe the whole
@@ -105,8 +107,15 @@ PulsePipe/
 ```
 
 See **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** for how the modules fit
-together and **[docs/RUNNING.md](docs/RUNNING.md)** for full install/run/test
-instructions.
+together, **[docs/INSTALLATION.md](docs/INSTALLATION.md)** for prerequisites and
+setup, **[docs/RUNNING.md](docs/RUNNING.md)** for full run/test instructions,
+**[docs/API.md](docs/API.md)** for every endpoint (also live at `/api/docs`),
+**[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** for local/Docker/VPS deployment
+(Coolify + Caddy + Uptime Kuma), plus
+**[docs/FEATURES.md](docs/FEATURES.md)**, **[docs/TECH-STACK.md](docs/TECH-STACK.md)**,
+**[docs/CODEBASE-ORGANIZATION.md](docs/CODEBASE-ORGANIZATION.md)**,
+**[docs/env-config.md](docs/env-config.md)** and
+**[docs/PLAYBOOK-CROSSWALK.md](docs/PLAYBOOK-CROSSWALK.md)**.
 
 ---
 
@@ -138,6 +147,14 @@ for the full table.
 | `PULSEPIPE_PORT` / `PULSEPIPE_HOST` | `8000` / `0.0.0.0` | bind address |
 
 ---
+
+## Roadmap
+
+- Webhook receivers and enrichment/ICP-scoring transforms (playbook FR-P1/P3/P4 hooks).
+- Sequence engine on top of dispatch mode/timeout (FR-P5).
+- Named channel subscribers: e-mail with warm-up + caps, LinkedIn, CRM sync (FR-P3/P6).
+- Reply classification and Cal.com booking (FR-P4/P5); weekly copy evals (FR-P9).
+- Auth on the API (open by design for the demo today).
 
 ## License
 

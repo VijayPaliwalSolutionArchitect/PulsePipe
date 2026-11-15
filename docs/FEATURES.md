@@ -1,5 +1,7 @@
 # PulsePipe — Features
 
+> Version: v0.1 · 15-11-26 · Author: SHIVAM ITCS (JARVIS)
+
 An itemized, source-backed tour of what PulsePipe can do.
 
 ## 1. Pipelines

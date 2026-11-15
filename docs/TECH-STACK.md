@@ -1,5 +1,7 @@
 # PulsePipe — Technology Stack
 
+> Version: v0.1 · 15-11-26 · Author: SHIVAM ITCS (JARVIS)
+
 ## Runtime & language
 
 | Component | Version | Notes |

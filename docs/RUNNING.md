@@ -1,5 +1,7 @@
 # PulsePipe — Running Locally
 
+> Version: v0.1 · 15-11-26 · Author: SHIVAM ITCS (JARVIS)
+
 Everything you need to install, configure, run, and test PulsePipe on a
 development machine or CI.
 

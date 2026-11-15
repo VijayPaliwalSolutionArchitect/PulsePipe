@@ -1,4 +1,6 @@
-# PulsePipe — Deployment
+# PulsePipe — Deployment Guide
+
+> Version: v0.1 · 15-11-26 · Author: SHIVAM ITCS (JARVIS)
 
 PulsePipe is a single FastAPI process over a file-backed SQLite database, so
 deployment is deliberately uncomplicated. This document covers container and
@@ -131,4 +133,50 @@ Backing up the single `pulsepipe.db` file is the whole game:
 - [ ] Auth/TLS enforced at the gateway; DB file not publicly reachable.
 - [ ] `PULSEPIPE_SEED_ON_START=false` after the first boot.
 - [ ] Health check wired to `GET /api/health` in your scheduler/orchestrator.
-- [ ] Payload size cap at the proxy to bound memory on `/api/events`.
+| [ ] Payload size cap at the proxy to bound memory on `/api/events`.
+
+## 9. Platform VPS deployment (playbook flow: Coolify + Caddy + Uptime Kuma)
+
+> Version: v0.1 · 15-11-26 · Author: SHIVAM ITCS (JARVIS)
+
+Hero-project deployment on the shared VPS platform (playbook demo URL:
+`https://pulse.shivamitcs.com`), following the standard flow
+(§4.7 “Deployment on the VPS and the live demo”):
+
+1. **Coolify** — add this repo as a service resource using the Dockerfile in
+   §3, with env set in Coolify:
+   ```
+   PULSEPIPE_DB_PATH=/data/pulsepipe.db
+   PULSEPIPE_SEED_ON_START=true      # first boot only; then false
+   PULSEPIPE_DISPATCH_MODE=async
+   PULSEPIPE_DISPATCH_TIMEOUT=5.0
+   ```
+   and a **persistent volume mounted at `/data`**.
+2. **Caddy site** — create `pulse.shivamitcs.com` in Caddy routing to the
+   container port `8000`; Caddy provisions **automatic HTTPS**. Verify TLS and
+   that the dashboard loads at `https://pulse.shivamitcs.com/`.
+3. **Acceptance smoke test** — from the VPS:
+   ```bash
+   curl -s https://pulse.shivamitcs.com/api/health                     # {"status":"ok","database":"ok",...}
+   curl -s -X POST https://pulse.shivamitcs.com/api/pipelines -H 'Content-Type: application/json' \
+     -d '{"name":"smoke","transform_spec":["tag:live"]}'
+   curl -s -X POST https://pulse.shivamitcs.com/api/events -H 'Content-Type: application/json' \
+     -d '{"pipeline":"smoke","event_id":"s1","payload":{"ok":true}}'
+   curl -s https://pulse.shivamitcs.com/api/metrics/counts
+   ```
+4. **Monitoring** — Uptime Kuma HTTP monitor on
+   `https://pulse.shivamitcs.com/api/health` (60 s interval; the endpoint does a
+   real `SELECT 1`, so a degraded DB fails the probe).
+5. **Backups** — nightly timer:
+   ```bash
+   sqlite3 /data/pulsepipe.db ".backup '/backups/pulsepipe-$(date +%F).db'"
+   ```
+   Retain 30 days; run **one timed restore drill** (restore to temp file, boot a
+   throwaway instance with `PULSEPIPE_DB_PATH=<temp>`, verify
+   `GET /api/metrics/counts`, record elapsed time).
+6. **Rollout** — push → Coolify rebuild/redeploy. Schema init is idempotent;
+   with `PULSEPIPE_SEED_ON_START=false` after first boot, restarts never
+   reseed over real data.
+
+PulsePipe needs **no API keys** — keep it on the private network segment and
+expose it only through the authenticated Caddy route (see §2/§4).

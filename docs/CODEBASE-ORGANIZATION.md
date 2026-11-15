@@ -1,5 +1,7 @@
 # PulsePipe — Codebase Organization
 
+> Version: v0.1 · 15-11-26 · Author: SHIVAM ITCS (JARVIS)
+
 A guided tour of every source file, where things live, and the conventions to
 follow when extending the project.
 

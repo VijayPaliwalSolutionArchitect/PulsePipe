@@ -1,5 +1,7 @@
 # PulsePipe — Architecture
 
+> Version: v0.1 · 15-11-26 · Author: SHIVAM ITCS (JARVIS)
+
 This document describes how PulsePipe is structured and how a single event
 flows through the system, based directly on the source in `backend/`.
 

@@ -16,6 +16,8 @@ env/
 .env.local
 
 # --- Runtime data ---
+*.db
+*.db-journal
 data/*.db
 data/*.db-journal
 data/*.sqlite*
@@ -26,6 +28,7 @@ node_modules/
 frontend/node_modules/
 
 # --- Tooling / OS ---
+.pytest_cache/
 .idea/
 .vscode/
 .DS_Store
