@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PulsePipe — Pipeline Console</title>
+<style>
+  :root {
+    --bg: #0f1420; --panel: #171e2e; --line: #26304a;
+    --text: #e6ebf5; --muted: #8a93ab; --accent: #4f8cff; --ok: #34c759;
+    --warn: #ffcc00; --crit: #ff453a; --info: #5ac8fa;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Segoe UI", system-ui, sans-serif; background: var(--bg); color: var(--text); }
+  header { padding: 18px 28px; border-bottom: 1px solid var(--line); display: flex; align-items: baseline; gap: 16px; }
+  header h1 { margin: 0; font-size: 22px; letter-spacing: .5px; }
+  header h1 span { color: var(--accent); }
+  header .sub { color: var(--muted); font-size: 13px; }
+  header .status { margin-left: auto; font-size: 13px; color: var(--muted); }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--ok); margin-right: 6px; }
+  main { padding: 24px 28px; max-width: 1200px; margin: 0 auto; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+  .card h3 { margin: 0 0 10px; font-size: 13px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); }
+  .metric { font-size: 28px; font-weight: 600; }
+  .metric small { font-size: 13px; color: var(--muted); font-weight: 400; }
+  .pipelines { list-style: none; margin: 0; padding: 0; }
+  .pipelines li { padding: 10px 0; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; }
+  .pipelines li:last-child { border-bottom: none; }
+  .pipe-name { font-weight: 600; }
+  .pipe-meta { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .badge { padding: 2px 8px; border-radius: 20px; font-size: 12px; }
+  .b-ok { background: rgba(52,199,89,.15); color: var(--ok); }
+  .b-crit { background: rgba(255,69,58,.15); color: var(--crit); }
+  .b-warn { background: rgba(255,204,0,.15); color: var(--warn); }
+  .b-info { background: rgba(90,200,250,.15); color: var(--info); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 600; text-transform: uppercase; font-size: 11px; letter-spacing: .5px; }
+  code { background: rgba(255,255,255,.06); padding: 1px 6px; border-radius: 4px; font-size: 12px; }
+  pre { background: #0b0f18; padding: 10px; border-radius: 8px; overflow-x: auto; font-size: 12px; }
+  .section { margin-bottom: 28px; }
+  .muted { color: var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Pulse<span>Pipe</span></h1>
+  <div class="sub">AI-ready event pipeline console</div>
+  <div class="status"><span class="dot"></span>loading…</div>
+</header>
+<main>
+  <div class="grid">
+    <div class="card"><h3>Pipelines</h3><div class="metric" id="m-pipes">—</div></div>
+    <div class="card"><h3>Events (total)</h3><div class="metric" id="m-events">—</div></div>
+    <div class="card"><h3>Throughput</h3><div class="metric" id="m-eps">—</div><small class="muted" style="font-size:12px">per sec / last 60s</small></div>
+    <div class="card"><h3>Queue depth</h3><div class="metric" id="m-queue">—</div></div>
+    <div class="card"><h3>Avg latency</h3><div class="metric" id="m-lat">—</div><small class="muted" style="font-size:12px">receive→emit, ms</small></div>
+    <div class="card"><h3>Alerts fired</h3><div class="metric" id="m-alerts">—</div></div>
+  </div>
+
+  <div class="section">
+    <h2 class="muted" style="font-size:16px">Pipelines</h2>
+    <div class="card"><ul class="pipelines" id="pipelines"><li class="muted">loading…</li></ul></div>
+  </div>
+
+  <div class="section">
+    <h2 class="muted" style="font-size:16px">Recent events</h2>
+    <div class="card">
+      <table>
+        <thead><tr><th>#</th><th>event_id</th><th>pipeline</th><th>status</th><th>received</th></tr></thead>
+        <tbody id="events"><tr><td colspan="5" class="muted">loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+async function jget(url) { const r = await fetch(url); if (!r.ok) throw new Error(url + ' -> ' + r.status); return r.json(); }
+
+function badge(status) {
+  if (status === 'emitted') return '<span class="badge b-ok">emitted</span>';
+  if (status === 'failed') return '<span class="badge b-crit">failed</span>';
+  return '<span class="badge b-warn">' + (status || 'received') + '</span>';
+}
+
+async function load() {
+  try {
+    const [health, counts, tp, queue, latency, alerts, pipelines, events] = await Promise.all([
+      jget('/api/health'), jget('/api/metrics/counts'), jget('/api/metrics/throughput?window_seconds=60'),
+      jget('/api/metrics/queue'), jget('/api/metrics/latency'), jget('/api/alerts?limit=50'),
+      jget('/api/pipelines'), jget('/api/events?limit=8'),
+    ]);
+    document.querySelector('.status').innerHTML = '<span class="dot"></span>' + health.app + ' v' + health.version + ' • db ' + health.database;
+    $('m-pipes').textContent = pipelines.length;
+    $('m-events').textContent = counts.total_events;
+    $('m-eps').textContent = tp.events_per_second;
+    $('m-queue').textContent = queue.total_depth;
+    $('m-lat').textContent = latency.emitted_events ? latency.avg_latency_ms : '—';
+    $('m-alerts').textContent = alerts.length;
+
+    const pl = pipelines.map(p =>
+      '<li><div><div class="pipe-name">' + p.name + '</div>' +
+      '<div class="pipe-meta">' + (p.description || '—') + ' · ' + p.event_count + ' events · ' + p.subscriber_count + ' subs</div></div>' +
+      '<code>' + (p.source || '—') + '</code></li>')
+      .join('');
+    $('pipelines').innerHTML = pl || '<li class="muted">no pipelines yet</li>';
+
+    const ev = events.map(e =>
+      '<tr><td>' + e.id + '</td><td>' + e.event_id + '</td><td>' + e.pipeline + '</td>' +
+      '<td>' + badge(e.status) + '</td><td>' + (e.received_at || '').slice(0,19).replace('T',' ') + 'Z</td></tr>')
+      .join('');
+    $('events').innerHTML = ev || '<tr><td colspan="5" class="muted">no events yet</td></tr>';
+  } catch (err) {
+    document.querySelector('.status').textContent = 'api unavailable: ' + err.message;
+  }
+}
+
+load();
+setInterval(load, 4000);
+</script>
+</body>
+</html>
